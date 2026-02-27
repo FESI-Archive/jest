@@ -1,15 +1,29 @@
 const { fetchUserData } = require('./fetchMock');
 
-test('fetchUserData 함수 테스트', async () => {
-  // 여기에 코드 작성
-  // 1. global.fetch를 모킹하세요
-  // 2. 모킹된 함수가 특정 응답을 반환하도록 설정하세요
-  globalThis.fetch = jest.fn().mockResolvedValue({
+test('사용자가 데이터를 성공적으로 가져오는 경우 모킹', async () => {
+  const mockUserData = { id: 1, name: '혜빈', email: 'bin@naver.com' };
+
+  // 1. fetch API 모킹하기
+  global.fetch = jest.fn().mockResolvedValue({
     ok: true,
-    json: jest.fn().mockResolvedValue({ id: 1, name: '혜빈' }),
+    json: jest.fn().mockResolvedValue(mockUserData),
   });
 
-  // 3. fetchUserData 함수를 호출하고 결과를 검증하세요
-  const userData = await fetchUserData(1);
-  expect(userData).toEqual({ id: 1, name: '혜빈' });
+  // 2. Promise 방식으로 테스트
+  return fetchUserData(1).then((userData) => {
+    expect(userData).toEqual(mockUserData);
+  });
+});
+
+test('네트워크 오류 발생 시 에러 처리 - Promise 방식', () => {
+  // 1. fetch가 거부된 Promise를 반환하도록 모킹
+  global.fetch = jest.fn().mockRejectedValue(new Error('Network Error'));
+
+  // 2. 최소 1개의 assertion이 필요
+  expect.assertions(1);
+
+  // 3. Promise 방식으로 에러 처리 테스트
+  return fetchUserData(1).catch((error) => {
+    expect(error.message).toBe('Network Error');
+  });
 });
