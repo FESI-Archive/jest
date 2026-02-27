@@ -1,9 +1,11 @@
+const axios = require('axios');
+
 // API 호출 + 데이터 포맷 + 콜백으로 데이터 전달
 const fetchData = async (url, callback) => {
   try {
     // 1. API 호출
-    const response = await fetch(url);
-    const rawData = await response.json();
+    const response = await axios.get(url);
+    const rawData = response.data;
 
     // 2. 데이터 포맷 - 프론트엔드에서 사용하기 좋은 형태로 변환
     const formattedData = {
