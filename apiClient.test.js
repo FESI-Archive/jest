@@ -74,5 +74,6 @@ describe('apiClient.js 테스트', () => {
       formattedName: '김철수',
       address: '테스트 거리 테스트 호수 서울',
     });
+    expect(callback).toHaveBeenCalledTimes(1); // 정확히 한 번만 호출되었는지 확인
   });
 });
