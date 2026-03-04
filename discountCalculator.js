@@ -1,57 +1,70 @@
-function calculatePrice(price, membership = 'regular', coupon = null) {
-  // 1. 가격에 따라 할인율을 적용
-  const priceAfterPriceDiscount = applyPriceDiscount(price);
+// 할인 계산기
+// 적용 순서: 가격 구간 할인 → 멤버십 할인 → 쿠폰 할인 → 최소 가격 하한(원가 * MIN_PRICE_RATIO)
 
-  // 2. 회원 등급에 따라 추가 할인 적용
-  const priceAfterMembershipDiscount = applyMembershipDiscount(
-    priceAfterPriceDiscount,
-    membership,
-  );
+const PRICE_TIERS = [
+  { minPrice: 200000, rate: 0.8 }, // 20만원 이상 20% 할인
+  { minPrice: 100000, rate: 0.9 }, // 10만원 이상 10% 할인
+  { minPrice: 50000, rate: 0.95 }, // 5만원 이상 5% 할인
+].sort((a, b) => b.minPrice - a.minPrice); // 높은 금액 구간부터 적용
+
+const MEMBERSHIP_RATES = {
+  regular: 1,
+  silver: 0.98, // 2% 할인
+  gold: 0.95, // 5% 할인
+  vip: 0.9, // 10% 할인
+};
+
+const MIN_PRICE_RATIO = 0.5; // 원가의 50% 이하로 불가
+
+const COUPON_TYPE = {
+  FIXED: 'fixed',
+  PERCENTAGE: 'percentage',
+};
+
+function calculatePrice(originalPrice, membership = 'regular', coupon = null) {
+  let price = originalPrice;
+
+  // 1. 가격 구간 할인
+  price = applyPriceDiscount(price, PRICE_TIERS);
+
+  // 2. 멤버십 할인
+  price = applyMembershipDiscount(price, membership, MEMBERSHIP_RATES);
 
   // 3. 쿠폰 할인 적용
-  const priceAfterCouponDiscount = applyCouponDiscount(
-    priceAfterMembershipDiscount,
-    coupon,
-  );
+  price = applyCouponDiscount(price, coupon);
 
-  // 4. 최소 가격 제한 적용
-  const finalPrice = applyMinimumPriceLimit(priceAfterCouponDiscount, price);
-
-  // 5. 최종 가격 반환
-  return finalPrice;
+  // 4. 최소 가격 제한 적용 (원가의 50% 이하로 내려가지 않도록)
+  return applyMinimumPriceLimit(price, originalPrice, MIN_PRICE_RATIO);
 }
 
-function applyPriceDiscount(price) {
-  if (price >= 200000) return price * 0.8; // 20% 할인
-  if (price >= 100000) return price * 0.9; // 10% 할인
-  if (price >= 50000) return price * 0.95; // 5% 할인
-  return price;
+function applyPriceDiscount(price, tiers) {
+  const tier = tiers.find((t) => price >= t.minPrice);
+  return tier ? price * tier.rate : price;
 }
 
-function applyMembershipDiscount(price, membership) {
-  if (membership === 'silver') {
-    return price * 0.98; // 실버 회원 2% 추가 할인
-  } else if (membership === 'gold') {
-    return price * 0.95; // 골드 회원 5% 추가 할인
-  } else if (membership === 'vip') {
-    return price * 0.9; // VIP 회원 10% 추가 할인
-  }
-  return price; // 일반 회원은 할인 없음
+function applyMembershipDiscount(price, membership, rates) {
+  const rate = rates[membership] ?? rates.regular;
+  return price * rate;
 }
 
 function applyCouponDiscount(price, coupon) {
   if (!coupon) return price;
-  if (coupon.type === 'percentage') {
+
+  if (coupon.type === COUPON_TYPE.PERCENTAGE) {
     return price * (1 - coupon.amount / 100);
   }
-  if (coupon.type === 'fixed') {
+
+  if (coupon.type === COUPON_TYPE.FIXED) {
     return price - coupon.amount;
   }
-  return price; // 잘못된 쿠폰 타입은 할인 없음
+
+  return price;
 }
 
-function applyMinimumPriceLimit(discountedPrice, originalPrice) {
-  return Math.max(discountedPrice, originalPrice * 0.5); // 최소 가격 할인 적용
+function applyMinimumPriceLimit(discountedPrice, originalPrice, minRatio) {
+  return Math.max(discountedPrice, originalPrice * minRatio);
 }
 
-module.exports = { calculatePrice };
+module.exports = {
+  calculatePrice,
+};
